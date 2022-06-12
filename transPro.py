@@ -56,21 +56,23 @@ if __name__ == '__main__':
                          help = 'perturbed proteomics data for dev')
     parser.add_argument('--pert_pros_test_dir',
                          type = str, 
-                         default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/pert_pro_plus_pert_trans/cell_split_1_512ab_pert_pros_test.csv',
+                         default='/raid/home/yoyowu/CODE-AE/data/0609_ccle_gdsc_to_predict_680_370.csv',
                          help = 'perturbed proteomics data for test, can be used to infer on other data ')
+                         #/raid/home/yoyowu/CODE-AE/data/0609_sample_to_predict.csv
+                         #/raid/home/yoyowu/CODE-AE/data/0609_ccle_gdsc_to_predict_680_370.csv
                          #/raid/home/yoyowu/PertPro/perturbed_proteomics/data/side_effect/FAERS_PTs_allCells_0.3conf_3.33um_CellLineDGX_x2142.csv
                          #/raid/home/yoyowu/PertPro/perturbed_proteomics/data/side_effect/FAERS_PTs_allCells_0.5conf_3.33um_CellLineDGX_x2192.csv
     parser.add_argument('--drug_file_dir',
                          type = str, 
-                         default='perturbed_proteomics/data/drugs_smiles_pro.csv',
+                         default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/a_gdsc_drugs_smiles_pro.csv',
                          help = 'the drug file directory (# broad_id # smiles #)')
     parser.add_argument('--trans_basal_dir',
                          type = str, 
-                         default='perturbed_proteomics/data/Combat_batch_removal/fixed_adjusted_ccle_tcga_basal_trans.csv',
+                         default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/Combat_batch_removal/fixed_adjusted_ccle_tcga_basal_trans.csv',
                          help = 'basal transcriptome data (cell feature)')
     parser.add_argument('--pretrained_model_dir',
                         type = str,
-                        default= None,
+                        default='/raid/home/yoyowu/PertPro/models_inventory/0422_get_pertTrans_w_transmitter_model.pt',
                         help = 'saved pretrained pretraining model')
                         # '/raid/home/yoyowu/PertPro/models_inventory/0422_get_pertTrans_w_transmitter_model.pt'
     parser.add_argument('--saved_model_path',
@@ -89,9 +91,12 @@ if __name__ == '__main__':
     parser.add_argument('--dop',type=float,default=0.1)
     parser.add_argument('--seed',type=int, default=343)
     parser.add_argument('--use_transmitter',type=int, default=1)
-    parser.add_argument('--infer_mode',type=int, default=0,help=' infer mode 0: infer mode is turned off, infer mode 1 : output the hidden representation, infer mode 2: output the final prediction')
+    parser.add_argument('--infer_mode',type=int, default=1,
+                        help=' infer mode 0: infer mode is turned off, \
+                        infer mode 1 : output the hidden representation, \
+                        infer mode 2: output the final prediction')
     parser.add_argument('--freeze_pretrained_modules',type = int, default=0)
-    parser.add_argument('--predicted_result_for_testset',type=str,default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/side_effect/0423Pros_preds_512ab_FAERS_PTs_allCells_0.5conf_3.33um_w_pertTrans.csv')
+    parser.add_argument('--predicted_result_for_testset',type=str,default='/raid/home/yoyowu/CODE-AE/data/0608_Transpro_embeddiings_cle_gdsc_pred.csv')
  # /raid/home/yoyowu/PertPro/chemblFiltered_and_supervise_pretrained_model_with_contextPred.pth
     args = parser.parse_args()
     
@@ -109,7 +114,7 @@ if __name__ == '__main__':
 
     data_config = get_config('data')
     
-    if args.infer_mode ==2:
+    if args.infer_mode ==2 or args.infer_mode ==1:
         data_config.data_filter = None
 
     pert_pros_dataloader = datareader.PerturbedDataLoader(
@@ -143,13 +148,13 @@ if __name__ == '__main__':
     wandb.watch(model, log="all")
 
     if args.infer_mode==1:
-        for step, (features, labels, _) in enumerate(pert_pros_dataloader.test_dataloader()):
+        for step, features in enumerate(pert_pros_dataloader.test_dataloader()):
             model.perturbed_pros_val_test_step(
                 features['drug'].to(device),
                 features['cell_id'],
-                labels
+                labels=None
             )
-        lb_np, predict_np = np.concatenate(model.label_ls), np.concatenate(model.prediction_ls)
+        predict_np = np.concatenate(model.prediction_ls)
         sorted_test_input = pd.read_csv(args.pert_pros_test_dir).sort_values(['pert_id', 'pert_type', 'cell_id', 'pert_idose'])
         #genes_cols = pd.read_csv(args.pert_pros_dev_dir).columns[5:]
         assert sorted_test_input.shape[0] == predict_np.shape[0]

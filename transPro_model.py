@@ -251,10 +251,10 @@ class TransProModel(TransProModelBase):
     def perturbed_pros_val_test_step(self, drug_feature, cell_feature, labels, epoch = 0):
         self.eval()
         predict = self.forward(drug_feature, cell_feature, 'perturbed_pros', epoch)
-        if self.infer_mode ==0 or self.infer_mode ==2:
+        if self.infer_mode ==0 :
             loss = self.loss(labels, predict, self.config.perturbed_pros.loss_type)
             self.loss_ls.append(loss.item())
-        self.label_ls.append(labels.cpu().numpy())
+        #self.label_ls.append(labels.cpu().numpy())
         self.prediction_ls.append(predict.detach().cpu().numpy())        
 
     def perturbed_trans_forward(self, drug_feature, cell_feature, epoch = 0):
