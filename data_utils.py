@@ -103,15 +103,15 @@ def read_data(input_file, filter=None):
                 ft = ','.join(line[:5])
                 data[ft]='foo'
             else:
-                if filter["time"] in line[0] and line[1] not in filter['pert_id'] and line[2] in filter["pert_type"] \
-                    and line[3] in filter['cell_id'] and line[4] in filter["pert_idose"]:
-                    ft = ','.join(line[:5])
-                    # print(ft)
-                    lb = [float(i) for i in line[5:]]
-                    if ft in data.keys():
-                        data[ft].append(lb)
-                    else:
-                        data[ft] = [lb]
+                # if filter["time"] in line[0] and line[1] not in filter['pert_id'] and line[2] in filter["pert_type"] \
+                #     and line[3] in filter['cell_id'] and line[4] in filter["pert_idose"]:
+                ft = ','.join(line[:5])
+                # print(ft)
+                lb = [float(i) for i in line[5:]]
+                if ft in data.keys():
+                    data[ft].append(lb)
+                else:
+                    data[ft] = [lb]
 
     if filter is not None:
         for ft, lb in sorted(data.items()):
@@ -167,11 +167,11 @@ def transform_to_tensor_per_dataset(feature,  drug,device, basal_expression_file
         pert_idose_dict = dict(zip(pert_idose_set, list(range(len(pert_idose_set)))))
         final_pert_idose_feature = []
         use_pert_idose = True
-    if label is not None:
-        print('Feature Summary (printing from data_utils):')
-        print(pert_type_set)
-        print(cell_id_set)
-        print(pert_idose_set)
+    # if label is not None:
+    #     print('Feature Summary (printing from data_utils):')
+    #     print(pert_type_set)
+    #     print(cell_id_set)
+    #     print(pert_idose_set)
 
     for i, ft in enumerate(feature):
         drug_fp = drug[ft[1]]

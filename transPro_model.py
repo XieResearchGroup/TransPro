@@ -136,6 +136,8 @@ class TransProModelBase(nn.Module):
     def __reset_result_ls(self):
         self.loss_ls, self.prediction_ls, self.label_ls = [], [], []
  
+
+
 class TransProModel(TransProModelBase):
 
     '''
@@ -181,6 +183,7 @@ class TransProModel(TransProModelBase):
                             hidden_dim=self.config.transmitter.hidden_dim, 
                             dop=args.dop )
         self.infer_mode = args.infer_mode 
+        self.task_spec = args.task_spec 
         self.use_transmitter = args.use_transmitter
     def forward(self, drug_feature, cell_feature, job, epoch = 0):
 
@@ -188,17 +191,7 @@ class TransProModel(TransProModelBase):
             return self.perturbed_trans_forward(drug_feature, cell_feature, epoch = epoch)
         else: ## 'perturbed_pros'
             return self.perturbed_pros_forward(drug_feature, cell_feature, epoch = epoch)
-    def freeze_modules(self, *frozen_modules):
-        # print('frozen the parameters')
-        for frozen_module in frozen_modules:
-            for param in frozen_module.parameters():
-                param.requires_grad = False
-    
-    def unfreeze_modules(self, *unfrozen_modules):
-        # print('Unfreeze the parameters')
-        for unfrozen_module in unfrozen_modules:
-            for param in unfrozen_module.parameters():
-                param.requires_grad = True
+  
 
     def load_pretrained_modules(self, pretrain_model):
         print('Loading in weights')
@@ -245,7 +238,7 @@ class TransProModel(TransProModelBase):
         if self.infer_mode ==0:
             loss = self.loss(labels, predict, self.config.perturbed_trans.loss_type)
             self.loss_ls.append(loss.item())    
-        self.label_ls.append(labels.cpu().numpy())
+            self.label_ls.append(labels.cpu().numpy())
         self.prediction_ls.append(predict.detach().cpu().numpy())        
 
     def perturbed_pros_val_test_step(self, drug_feature, cell_feature, labels, epoch = 0):
@@ -254,7 +247,7 @@ class TransProModel(TransProModelBase):
         if self.infer_mode ==0 :
             loss = self.loss(labels, predict, self.config.perturbed_pros.loss_type)
             self.loss_ls.append(loss.item())
-        #self.label_ls.append(labels.cpu().numpy())
+            self.label_ls.append(labels.cpu().numpy())
         self.prediction_ls.append(predict.detach().cpu().numpy())        
 
     def perturbed_trans_forward(self, drug_feature, cell_feature, epoch = 0):
@@ -269,10 +262,14 @@ class TransProModel(TransProModelBase):
         drug_cell_embed = torch.cat((drug_cell_embed , drug_diff/10.0),dim=1)
         # addition 
         #drug_cell_embed = drug_cell_embed + drug_diff/10.0
-        if self.infer_mode ==0:
-            return self.trans_decoder(drug_cell_embed)[1]
-        else: 
+        if self.task_spec ==1:
+            # task spec optinal 1. hidden layer from the trans decoder 2. input of the trans decoder
+            return drug_cell_embed
+        if  self.infer_mode ==1:
             return self.trans_decoder(drug_cell_embed)[0]
+        if self.infer_mode ==0 or self.infer_mode ==2:
+            return self.trans_decoder(drug_cell_embed)[1]
+        
 
     def perturbed_pros_forward(self, drug_feature, cell_feature, epoch = 0):
         #add gn on cell encoder 
@@ -285,17 +282,58 @@ class TransProModel(TransProModelBase):
         drug_cell_embed, _ = self.drug_cell_attn(cell_embed, drug_diff,None, None)
         # choose either cat or addition. if cat, change the model dim 
         # cat 
-        drug_cell_embed = torch.cat((drug_cell_embed , drug_diff),dim=1)
+        drug_cell_embed_trans = torch.cat((drug_cell_embed , drug_diff),dim=1)
         # addition 
         #drug_cell_embed = drug_cell_embed + drug_diff
         # w transmitter 
         if self.use_transmitter==1:
-            _,drug_cell_embed = self.transmitter(drug_cell_embed)
+            _,drug_cell_embed_pros = self.transmitter(drug_cell_embed_trans)
+        if self.task_spec ==1 or self.infer_mode ==1 :
+            # return hidden rep if connects to downstream 
+            return drug_cell_embed_pros
+            #comb_trans_pros = drug_cell_embed_pros+drug_cell_embed_trans
+            # comb_trans_pros = torch.cat((drug_cell_embed_pros,drug_cell_embed_trans),dim=1)
+            # return comb_trans_pros
         if self.infer_mode ==0 or self.infer_mode ==2 :
-            return self.pros_decoder(drug_cell_embed)[1]
-        else: 
-            #return self.pros_decoder(drug_cell_embed)[0]
-            return drug_cell_embed
+            return self.pros_decoder(drug_cell_embed_pros)[1]
+        
+    
+
+class Ic50_task(TransProModel):
+    def __init__(self, device, transPro_config, args) :
+        super(Ic50_task, self).__init__(device, transPro_config, args)
+        self.transPro = TransProModel(device,transPro_config, args)
+        self.config = transPro_config
+        self.relu = nn.ReLU()
+        self.task_spec = nn.Sequential(nn.Linear(self.config.Ic_50.hid_dim, self.config.Ic_50.hid_dim//2), 
+                                            nn.ReLU(), 
+                                            nn.Linear(self.config.Ic_50.hid_dim//2, self.config.Ic_50.hid_dim//2),
+                                            nn.ReLU(),
+                                            nn.Linear(self.config.Ic_50.hid_dim//2, 1))
+
+    def forward(self, drug_feature, cell_feature, job, epoch=0):
+        prot_emb = self.transPro( drug_feature, cell_feature, job, epoch=0)
+        out = self.relu(prot_emb)
+        out = self.task_spec(out)
+        return out 
+
+    def train_step(self, drug_feature, cell_feature, labels, job, epoch = 0):
+        self.optimizer.zero_grad()
+        self.train()
+        predict = self.forward(drug_feature, cell_feature, job, epoch)
+        loss = self.loss(labels, predict, 'point_wise_mse')
+        loss.backward()
+       
+        self.optimizer.step()
+        self.loss_ls.append(loss.item())
+    
+    def val_test_step(self, drug_feature, cell_feature, labels, job, epoch = 0):
+        self.eval()
+        predict = self.forward(drug_feature, cell_feature, job, epoch)
+        loss = self.loss(labels, predict, 'point_wise_mse')
+        self.loss_ls.append(loss.item())
+        self.label_ls.append(labels.cpu().numpy().reshape(-1))
+        self.prediction_ls.append(predict.detach().cpu().numpy().reshape(-1))     
 
 num_atom_type = 120  # including the extra mask tokens
 num_degree = 11

@@ -63,6 +63,9 @@ CONFIG = ml_collections.ConfigDict({
         'drug_cell_attn':{
             'hidden_dim': latent_space_dim_placeholder
         },
+
+        'Ic_50':{ 'hid_dim' :256},
+        
         'perturbed_trans':{
             'loss_type': 'point_wise_mse'
         },
