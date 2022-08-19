@@ -14,11 +14,11 @@ exp_id=0709_${job}_emb_${split}_bs_${batch_size}_dop_${dop}_lr_${lr}_sd_${seed}
 python transPro_Ic50_ft.py \
 --exp_id ${exp_id} --dop ${dop} --seed ${seed} --batch_size ${batch_size} \
 --device 1  --max_epochs 1000 --lr ${lr} --job ${job} \
---Ic_50_train_dir "/raid/home/yoyowu/PertPro/perturbed_proteomics/data/Ic50_e2e/${split}_train_ic50_wo_na.csv" \
---Ic_50_dev_dir "/raid/home/yoyowu/PertPro/perturbed_proteomics/data/Ic50_e2e/${split}_dev_ic50_wo_na.csv" \
---Ic_50_test_dir "/raid/home/yoyowu/PertPro/perturbed_proteomics/data/Ic50_e2e/rand_0123_test_ic50_wo_na.csv" \
---drug_file_dir "/raid/home/yoyowu/PertPro/perturbed_proteomics/data/a_gdsc_drugs_smiles_pro.csv" \
---trans_basal_dir "/raid/home/yoyowu/PertPro/perturbed_proteomics/data/Combat_batch_removal/fixed_adjusted_ccle_tcga_basal_trans.csv" \
+--Ic_50_train_dir "data/Ic50/${split}_train_ic50_wo_na.csv" \
+--Ic_50_dev_dir "data/Ic50/${split}_dev_ic50_wo_na.csv" \
+--Ic_50_test_dir "data/Ic50/rand_0123_test_ic50_wo_na.csv" \
+--drug_file_dir "data/a_gdsc_drugs_smiles_pro.csv" \
+--trans_basal_dir "data/CCLE_x1305_978genes.csv" \
 >June_logs/${exp_id}.log 2>&1 &
 done
 done
