@@ -1,5 +1,7 @@
 
-TransPro_a is an end-to-end multi-task deep learning framework for predicting cell-specific proteomics profiles as well as cellular and organismal phenotypes perturbed by novel unseen chemicals from abundant transcriptomics data, and hierarchically integrating multi-omics data
+# TransPro : Hierarchical Multi-omics Data Integration and Modeling to Predict Novel Chemical-Induced Cell-Specific Proteomics Profiles for Systems Pharmacology
+
+TransPro is an end-to-end multi-task deep learning framework for predicting cell-specific proteomics profiles as well as cellular and organismal phenotypes perturbed by novel unseen chemicals from abundant transcriptomics data, and hierarchically integrating multi-omics data
 following the central dogma of molecular biology. Our comprehensive evaluations
 of anti-cancer drug sensitivity and drug adverse reaction predictions suggest that
 the accuracy of TransPro predictions is comparable to that of experimental data.
@@ -9,7 +11,7 @@ pharmacology-oriented compound screening.
 # Architecture
 
 ![alt text](images/Figure1.jpg "system overview")
-# Data download
+# Data Download
 
 data can be downloaded via 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.7699298.svg)](https://doi.org/10.5281/zenodo.7699298)
@@ -50,7 +52,7 @@ To run this project, you will need to have the following installed on your local
 4. Install the required Python packages in the Conda environment using the following command:
     
     ```
-    bash conda_env.sh 
+    bash scripts/conda_env.sh 
     ```
     
 
@@ -63,7 +65,7 @@ The objective of this task is to train a TransPro model using perturbed proteomi
 To start training and evaluating, run 
 
 ```
-transPro_train.sh
+scripts/transPro_train.sh
 ```
 
 The three different scenarios that will be evaluated are:
@@ -85,7 +87,7 @@ Note that the script will train and evaluate the model for each scenario with di
     run script 
     
     ```
-     transPro_get_embeddings.sh 
+     scripts/transPro_get_embeddings.sh 
     ```
     
     To get embeddings for different adverse drug reaction dataset, set “dataset” to “FAERS/SIDERS” with “conf_level” to “0.3/0.5”.
@@ -95,7 +97,7 @@ Note that the script will train and evaluate the model for each scenario with di
 2. to get final prediction using the pre-trained model ,run script : 
     
     ```
-    transPro_get_final_predictions.sh 
+    scripts/transPro_get_final_predictions.sh 
     ```
     
     one can pass other files to —pert_pros_test_dir to get the predictions, as long as the cells and drugs are in the research scope.
@@ -105,14 +107,14 @@ Note that the script will train and evaluate the model for each scenario with di
     The script will output a log file in the same path set before, and a predicted result file in the path past to —predicted_result_for_testset. One may create a folder “predictions” in the root path.
     
 
-## 3**. A**dverse Drug Reaction Prediction
+## 3. Adverse Drug Reaction Prediction
 
 This task involves training another deepNN models for ADR prediction using different input data types, namely experimental transcriptomics, experimental proteomics, and TransPro output proteomics.
 
 Run script
 
 ```
-adr_prediction.sh
+scripts/adr_prediction.sh
 ```
 
 One may change the path according to different input data:
@@ -133,7 +135,7 @@ c) TransPro output perturbed proteomics data with the path specified as:
 
 The script will output a log file in the same path set before. 
 
-## 4. **A**nti-cancer drug sensitivity prediction
+## 4. Anti-cancer drug sensitivity prediction
 
 An end-to-end training pipeline was built on top of TransPro architecture for the transcriptomics
 and proteomics predictions by using the drug sensitivity information (IC50) to fine-tune
@@ -142,7 +144,7 @@ the pre-trained TransPro model.
 Run script:
 
 ```
-Ic_50_task.sh
+scripts/Ic_50_task.sh
 ```
 
 Change “job” to  “perturbed_trans” or “perturbed_pros”  accordingly for using either the transcriptomics embedding or the proteomics embedding for evaluating the predictive power of the predicted transcriptomics profiles or of the predictive proteomics profiles, respectively.
