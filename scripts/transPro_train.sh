@@ -8,7 +8,7 @@ seed=343
 split=cell_split_0
 python transPro.py \
 --exp_id ${exp_id} --dop 0.2 --seed ${seed} --infer_mode 0 \
---warmup_epochs 2 --max_epochs 5 --lr_low 0.0001 --lr_high 0.0002 \
+--warmup_epochs 600 --max_epochs 1500 --lr_low 0.0001 --lr_high 0.0002 \
 --include_trans 1 --use_transmitter 1 --device 2 \
 --pert_trans_train_dir "data/adjusted_l1000_pert_trans_full.csv" \
 --pert_trans_dev_dir "data/adjusted_l1000_pert_trans_dev.csv" \
