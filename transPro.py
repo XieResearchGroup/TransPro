@@ -36,70 +36,65 @@ if __name__ == '__main__':
     parser.add_argument('--exp_id', type=str, default='test')
     parser.add_argument('--pert_trans_train_dir',
                          type = str, 
-                         default='perturbed_proteomics/data/pert_pro_plus_pert_trans/adjusted_l1000_pert_trans_full.csv',
+                         default='data/adjusted_l1000_pert_trans_full.csv',
                          help = 'perturbed transcriptome data for training')
     parser.add_argument('--pert_trans_dev_dir',
                          type = str, 
-                         default='perturbed_proteomics/data/pert_pro_plus_pert_trans/adjusted_l1000_pert_trans_dev.csv',
+                         default='data/adjusted_l1000_pert_trans_dev.csv',
                          help = 'perturbed transcriptome data for dev')
     parser.add_argument('--pert_trans_test_dir',
                          type = str, 
-                         default='/raid/home/yoyowu/CODE-AE/data/0609_ccle_gdsc_to_predict_680_370.csv',
+                         default='data/adjusted_l1000_pert_trans_test.csv',
                          help = 'perturbed transcriptome data for test')
 
     parser.add_argument('--pert_pros_train_dir',
                          type = str, 
-                         default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/pert_pro_plus_pert_trans/cell_split_1_512ab_noImpu_pert_pros_train.csv',
+                         default='data/cell_split_1_512ab_noImpu_pert_pros_train.csv',
                          help = 'perturbed proteomics data for training')
     parser.add_argument('--pert_pros_dev_dir',
                          type = str, 
-                         default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/pert_pro_plus_pert_trans/cell_split_1_512ab_pert_pros_dev.csv',
+                         default='data/cell_split_1_512ab_pert_pros_dev.csv',
                          help = 'perturbed proteomics data for dev')
     parser.add_argument('--pert_pros_test_dir',
                          type = str, 
-                         default='/raid/home/yoyowu/CODE-AE/data/0609_ccle_gdsc_to_predict_680_370.csv',
+                         default='data/cell_split_1_512ab_pert_pros_test.csv',
                          help = 'perturbed proteomics data for test, can be used to infer on other data ')
-                         #/raid/home/yoyowu/CODE-AE/data/0609_sample_to_predict.csv
-                         #/raid/home/yoyowu/CODE-AE/data/0609_ccle_gdsc_to_predict_680_370.csv
-                         #/raid/home/yoyowu/PertPro/perturbed_proteomics/data/side_effect/FAERS_PTs_allCells_0.3conf_3.33um_CellLineDGX_x2142.csv
-                         #/raid/home/yoyowu/PertPro/perturbed_proteomics/data/side_effect/FAERS_PTs_allCells_0.5conf_3.33um_CellLineDGX_x2192.csv
+                
     parser.add_argument('--drug_file_dir',
                          type = str, 
-                         default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/a_gdsc_drugs_smiles_pro.csv',
+                         default='data/a_gdsc_drugs_smiles_pro.csv',
                          help = 'the drug file directory (# broad_id # smiles #)')
     parser.add_argument('--trans_basal_dir',
                          type = str, 
-                         default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/Combat_batch_removal/fixed_adjusted_ccle_tcga_basal_trans.csv',
+                         default='data/CCLE_x1305_978genes.csv',
                          help = 'basal transcriptome data (cell feature)')
     parser.add_argument('--pretrained_model_dir',
                         type = str,
-                        default='/raid/home/yoyowu/PertPro/models_inventory/0422_get_pertTrans_w_transmitter_model.pt',
+                        default=None,
                         help = 'saved pretrained pretraining model')
-                        # '/raid/home/yoyowu/PertPro/models_inventory/0422_get_pertTrans_w_transmitter_model.pt'
     parser.add_argument('--saved_model_path',
                         type = str,
                         default = None)
-    parser.add_argument('--warmup_epochs',type=int, default=2,help='the epochs for altanative training with pert trans data, default:600')
+    parser.add_argument('--warmup_epochs',type=int, default=600, help='the epochs for altanative training with pert trans data')
     parser.add_argument('--max_epochs',
                         type = int,
-                        default=4,
+                        default=1500,
                         help = 'Total number of epochs')    
     parser.add_argument('--lr_low',type=float,default=0.0001)
     parser.add_argument('--lr_high',type=float,default=0.0002)
     parser.add_argument('--wd',type=float, default=0.01)
-    parser.add_argument('--include_trans', type=int, default=1,help='whether to include the pert trans data')                     
-    parser.add_argument('--device', type=int, default=1)
-    parser.add_argument('--dop',type=float,default=0.1)
+    parser.add_argument('--include_trans', type=int, default=0,help='whether to include the pert trans data')                     
+    parser.add_argument('--device', type=int, default=2)
+    parser.add_argument('--dop',type=float,default=0.2)
     parser.add_argument('--seed',type=int, default=343)
     parser.add_argument('--use_transmitter',type=int, default=1)
-    parser.add_argument('--infer_mode',type=int, default=2,
-                        help=' infer mode 0: infer mode is turned off, \
+    parser.add_argument('--infer_mode',type=int, default=0,
+                        help=' infer mode 0: training mode is on, infer mode is turned off, \
                         infer mode 1 : output the hidden representation, \
                         infer mode 2: output the final prediction')
-    parser.add_argument('--task_spec', type = int, default=0)
+    parser.add_argument('--task_spec', type = int, default=0, help='whether use task specific module ')
     parser.add_argument('--freeze_pretrained_modules',type = int, default=0)
-    parser.add_argument('--predicted_result_for_testset',type=str,default='/raid/home/yoyowu/PertPro/perturbed_proteomics/data/0701_trans_predictions.csv')
- # /raid/home/yoyowu/PertPro/chemblFiltered_and_supervise_pretrained_model_with_contextPred.pth
+    parser.add_argument('--predicted_result_for_testset',type=str,default=None)
     args = parser.parse_args()
     
     seed=args.seed
@@ -119,12 +114,12 @@ if __name__ == '__main__':
     if args.infer_mode ==2 or args.infer_mode ==1:
         data_config.data_filter = None
 
-    # pert_pros_dataloader = datareader.PerturbedDataLoader(
-    #     args.drug_file_dir, args.pert_pros_train_dir, args.pert_pros_dev_dir,
-    #     args.pert_pros_test_dir, data_config.data_filter, device,
-    #     args.trans_basal_dir, batch_size = 64
-    # )
-    # setup_dataloader(pert_pros_dataloader)
+    pert_pros_dataloader = datareader.PerturbedDataLoader(
+        args.drug_file_dir, args.pert_pros_train_dir, args.pert_pros_dev_dir,
+        args.pert_pros_test_dir, data_config.data_filter, device,
+        args.trans_basal_dir, batch_size = 64
+    )
+    setup_dataloader(pert_pros_dataloader)
 
     if args.include_trans ==1:
         pert_trans_dataloader = datareader.PerturbedDataLoader(
@@ -168,14 +163,14 @@ if __name__ == '__main__':
     
     elif args.infer_mode==2:
         
-        for step, features in enumerate(pert_trans_dataloader.test_dataloader()):
-            model.perturbed_trans_val_test_step(
+        for step, features in enumerate(pert_pros_dataloader.test_dataloader()):
+            model.perturbed_pros_val_test_step(
                 features['drug'].to(device),
                 features['cell_id'] ,labels=None)
         predict_np = np.concatenate(model.prediction_ls)
         sorted_test_input = pd.read_csv(args.pert_pros_test_dir).sort_values(['pert_id', 'pert_type', 'cell_id', 'pert_idose'])
-        genes_cols = pd.read_csv(args.pert_trans_dev_dir).columns[5:]
-        #genes_cols = pd.read_csv(args.pert_pros_dev_dir).columns[5:]
+        #genes_cols = pd.read_csv(args.pert_trans_dev_dir).columns[5:]
+        genes_cols = pd.read_csv(args.pert_pros_dev_dir).columns[5:]
         assert sorted_test_input.shape[0] == predict_np.shape[0]
         predict_df = pd.DataFrame(predict_np, index = sorted_test_input.index,columns=genes_cols)
         result_df  = pd.concat([sorted_test_input.iloc[:, :5], predict_df], axis = 1)
@@ -185,13 +180,13 @@ if __name__ == '__main__':
     
     else:
         # start training... 
-        ## set lower learning rate
+        ## set lower learning rate for the iterative training 
         model.config_optimizer(lr = args.lr_low)
         for epoch in range( args.warmup_epochs):
-            print("Iteration %d:" % (epoch+1))
             if args.include_trans ==1:
+                print("Iteration %d:" % (epoch+1))
                 print('Including trans training...')
-                if epoch % 5==0:
+                if epoch % 5==0: # include trans training every 5 epochs 
                     print('Perturbed Train Val Trans....')
                     for step, (features, labels, _) in enumerate(pert_trans_dataloader.train_dataloader()):
                         model.perturbed_trans_train_step(

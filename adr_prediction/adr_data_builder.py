@@ -72,7 +72,7 @@ class ADRDataBuilder:
 
 class PerturbedDGXDataBuilder:
 
-    def __init__(self, gx_file_name, drug_cs_dir, pert_list, pred_flag=False, cs_part = True):
+    def __init__(self, gx_file_name, pert_list, pred_flag=False, cs_part = True):
         '''
         build the pertubed gene expression dataframe from either FAERS_offsides_PTs_PredictionDGX.csv or *_PTs_PredictionDGX.csv
         :file_name: str

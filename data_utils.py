@@ -1,30 +1,10 @@
 import numpy as np
 import random
 import torch
-from molecules import Molecules
+#from molecules import Molecules
 import pdb
 import pandas as pd
 from chem_loader import *
-
-def read_drug_number(input_file, num_feature):
-    drug = []
-    drug_vec = []
-    with open(input_file, 'r') as f:
-        for line in f:
-            line = line.strip().split(',')
-            assert len(line) == num_feature + 1, "Wrong format"
-            bin_vec = [float(i) for i in line[1:]]
-            drug.append(line[0])
-            drug_vec.append(bin_vec)
-    drug_vec = np.asarray(drug_vec, dtype=np.float64)
-    index = []
-    for i in range(np.shape(drug_vec)[1]):
-        if len(set(drug_vec[:, i])) > 1:
-            index.append(i)
-    drug_vec = drug_vec[:, index]
-    drug = dict(zip(drug, drug_vec))
-    return drug, len(index)
-
 
 def read_drug_string(input_file):
     with open(input_file, 'r') as f:
@@ -35,32 +15,6 @@ def read_drug_string(input_file):
             drug[line[0]] = line[1]
     return drug, None
 
-
-def read_gene(input_file, device):
-    with open(input_file, 'r') as f:
-        gene = []
-        for line in f:
-            line = line.strip().split(',')
-            assert len(line) == 129, "Wrong format"
-            gene.append([float(i) for i in line[1:]])
-    return torch.from_numpy(np.asarray(gene, dtype=np.float64)).to(device)
-
-
-def convert_smile_to_feature(smiles, device):
-    molecules = Molecules(smiles)
-    node_repr = torch.FloatTensor([node.data for node in molecules.get_node_list('atom')]).to(device).double()
-    edge_repr = torch.FloatTensor([node.data for node in molecules.get_node_list('bond')]).to(device).double()
-    return {'molecules': molecules, 'atom': node_repr, 'bond': edge_repr}
-
-
-def create_mask_feature(data, device):
-    batch_idx = data['molecules'].get_neighbor_idx_by_batch('atom')
-    molecule_length = [len(idx) for idx in batch_idx]
-    mask = torch.zeros(len(batch_idx), max(molecule_length)).to(device).double()
-    for idx, length in enumerate(molecule_length):
-        mask[idx][:length] = 1
-    return mask
-
 def choose_mean_example(examples):
     num_example = len(examples)
     mean_value = (num_example - 1) / 2
@@ -70,18 +24,6 @@ def choose_mean_example(examples):
     distance = (indexes - mean_value)**2
     index = np.argmin(distance)
     return examples[index]
-
-
-def split_data_by_pert_id(pert_id):
-    random.shuffle(pert_id)
-    num_pert_id = len(pert_id)
-    fold_size = int(num_pert_id/10)
-    train_pert_id = pert_id[:fold_size*6]
-    dev_pert_id = pert_id[fold_size*6: fold_size*8]
-    test_pert_id = pert_id[fold_size*8:]
-    return train_pert_id, dev_pert_id, test_pert_id
-
-
 
 def read_data(input_file, filter=None):
     """
@@ -159,19 +101,14 @@ def transform_to_tensor_per_dataset(feature,  drug,device, basal_expression_file
         pert_type_dict = dict(zip(pert_type_set, list(range(len(pert_type_set)))))
         final_pert_type_feature = []
         use_pert_type = True
-    if len(cell_id_set) > 1:
-        cell_id_dict = dict(zip(cell_id_set, list(range(len(cell_id_set)))))
-        final_cell_id_feature = []
-        use_cell_id = True
+  
+    cell_id_dict = dict(zip(cell_id_set, list(range(len(cell_id_set)))))
+    final_cell_id_feature = []
+    use_cell_id = True
     if len(pert_idose_set) > 1:
         pert_idose_dict = dict(zip(pert_idose_set, list(range(len(pert_idose_set)))))
         final_pert_idose_feature = []
         use_pert_idose = True
-    # if label is not None:
-    #     print('Feature Summary (printing from data_utils):')
-    #     print(pert_type_set)
-    #     print(cell_id_set)
-    #     print(pert_idose_set)
 
     for i, ft in enumerate(feature):
         drug_fp = drug[ft[1]]
@@ -183,8 +120,6 @@ def transform_to_tensor_per_dataset(feature,  drug,device, basal_expression_file
             pert_type_feature[pert_type_dict[ft[2]]] = 1
             final_pert_type_feature.append(np.array(pert_type_feature, dtype=np.float64))
         if use_cell_id:
-            # cell_id_feature = np.zeros(len(cell_id_set))
-            # cell_id_feature[cell_id_dict[ft[3]]] = 1
             cell_id_feature = basal_cell_line_expression_feature_csv.loc[ft[3],:] ## new_code
             final_cell_id_feature.append(np.array(cell_id_feature, dtype=np.float64))
         if use_pert_idose:
@@ -206,38 +141,6 @@ def transform_to_tensor_per_dataset(feature,  drug,device, basal_expression_file
    
     label_regression = torch.from_numpy(label).to(device)
     return feature_dict, label_regression, use_pert_type, use_cell_id, use_pert_idose
-
-
-def transfrom_to_tensor(feature_train, label_train, feature_dev, label_dev, feature_test, label_test, drug,
-                        device, basal_expression_file_name):
-
-    """
-    :param feature_train: features like pertid, dosage, cell id, etc. will be used to transfer to tensor over here
-    :param label_train:
-    :param feature_dev:
-    :param label_dev:
-    :param feature_test:
-    :param label_test:
-    :param drug: ??? a drug dictionary mapping drug name into smile strings
-    :param device: save on gpu device if necessary
-    :return:
-    """
-    # basal_expression_file_name = 'ccle_gene_expression_file.csv'
-    # basal_expression_file_name = 'ccle_gene_expression_2176.csv'
-    train_feature, train_label_regression, use_pert_type_train, use_cell_id_train, use_pert_idose_train = \
-        transform_to_tensor_per_dataset(feature_train, label_train, drug, device, basal_expression_file_name)
-    dev_feature, dev_label_regression, use_pert_type_dev, use_cell_id_dev, use_pert_idose_dev = \
-        transform_to_tensor_per_dataset(feature_dev, label_dev, drug, device, basal_expression_file_name)
-    test_feature, test_label_regression, use_pert_type_test, use_cell_id_test, use_pert_idose_test = \
-        transform_to_tensor_per_dataset(feature_test, label_test, drug, device, basal_expression_file_name)
-    assert use_pert_type_train == use_pert_type_dev and use_pert_type_train == use_pert_type_test, \
-            'use pert type is not consistent'
-    assert use_cell_id_train == use_cell_id_dev and use_cell_id_train == use_cell_id_test, \
-            'use cell id is not consistent'
-    assert use_pert_idose_train == use_pert_idose_dev and use_pert_idose_train == use_pert_idose_test, \
-            'use pert idose is not consistent'
-    return train_feature, dev_feature, test_feature, train_label_regression, dev_label_regression, \
-           test_label_regression, use_pert_type_train, use_cell_id_train, use_pert_idose_train
 
 if __name__ == '__main__':
     filter = {"time": "24H", "pert_id": ['BRD-U41416256', 'BRD-U60236422'], "pert_type": ["trt_cp"],

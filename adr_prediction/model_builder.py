@@ -1,16 +1,14 @@
 from abc import ABC, abstractmethod
+from matplotlib.pyplot import axis
 import torch.nn as nn
 import torch
 from torch import device, cuda
-import wandb
 from sklearn.metrics import roc_auc_score, average_precision_score
 import numpy as np
 import os
 import random
 import pdb
-USE_wandb = False
-if USE_wandb:
-    wandb.init(project="ADR_prediction")
+
 
 class ADRPredictionModelABC(ABC):
 
@@ -75,14 +73,12 @@ class ADRPredictionDeepModel(nn.Module):
 
 class DeepModel(ADRPredictionModelABC):
 
-    def __init__(self, X_dim, Y_dim, layout = [1000,1000,500], random_seed = 42, device = device("cpu"), split_num = 0, logger = None):
+    def __init__(self, X_dim, Y_dim, layout = [1000,1000,500], random_seed = 42, device = device("cpu"), logger = None):
         super(DeepModel, self).__init__()
         self.device = device
         self.model = ADRPredictionDeepModel(X_dim, Y_dim, layout)
         self.model.init_weights()
         self.model = self.model.to(self.device)
-        if USE_wandb:
-            wandb.watch(self.model, log="all")
         self.optimizer = torch.optim.Adam(self.model.parameters(), lr=0.00002)
         self.batch_size =128
         self.random_seed = random_seed
@@ -147,20 +143,10 @@ class DeepModel(ADRPredictionModelABC):
             Y_pred_ls.append(Y_pred.detach().cpu().numpy())
             self.optimizer.step()
         shuffled_pred_Y = np.concatenate(Y_pred_ls)
-        # micro_aucroc = roc_auc_score(shuffled_Y.reshape(-1), shuffled_pred_Y.reshape(-1))
-        # micro_prauc = average_precision_score(shuffled_Y.reshape(-1), shuffled_pred_Y.reshape(-1))
-        # macro_aucroc = roc_auc_score(shuffled_Y, shuffled_pred_Y, average = 'weighted')
-        # macro_prauc = average_precision_score(shuffled_Y, shuffled_pred_Y, average = 'weighted')
         macro_aucroc = roc_auc_score(shuffled_Y.reshape(-1), shuffled_pred_Y.reshape(-1))
         macro_prauc = average_precision_score(shuffled_Y.reshape(-1), shuffled_pred_Y.reshape(-1))
         micro_aucroc = roc_auc_score(shuffled_Y, shuffled_pred_Y,average="micro")
         micro_prauc = average_precision_score(shuffled_Y, shuffled_pred_Y,average="micro")
-        if USE_wandb:
-            wandb.log({'ADR loss' + self.version: np.mean(loss_ls[:-1]),
-                        'micro aucroc' + self.version: micro_aucroc, 
-                        'macro aucroc' + self.version: macro_aucroc,
-                        'micro prauc' + self.version: micro_prauc,
-                        'macro prauc' + self.version: macro_prauc})
         if self.logger is None:
             print("{0:.4f}, {1:.4f}, {2:.4f}, {3:.4f}, {4:.4f}, {5!r}".format(np.mean(loss_ls[:-1]), micro_aucroc, macro_aucroc, micro_prauc, macro_prauc, self.epoch+1))
         else:
@@ -168,7 +154,7 @@ class DeepModel(ADRPredictionModelABC):
         self.epoch += 1
         return np.mean(loss_ls[:-1])
     
-    def score(self, X, Y):
+    def score(self, X, Y, test_drug_idx):
 
         self.model.eval()
         Y_pred_ls = []
@@ -180,25 +166,24 @@ class DeepModel(ADRPredictionModelABC):
         
         all_Y_pred = np.concatenate(Y_pred_ls)
 
-        macro_aucroc = roc_auc_score(Y.reshape(-1), all_Y_pred.reshape(-1))
-        macro_prauc = average_precision_score(Y.reshape(-1), all_Y_pred.reshape(-1))
-        micro_aucroc = roc_auc_score(Y, all_Y_pred,average="micro")
-        micro_prauc = average_precision_score(Y, all_Y_pred,average="micro")
-        # micro_aucroc = roc_auc_score(Y.reshape(-1), all_Y_pred.reshape(-1))
-        # micro_prauc = average_precision_score(Y.reshape(-1), all_Y_pred.reshape(-1))
-        # macro_aucroc = roc_auc_score(Y, all_Y_pred, average = 'weighted')
-        # macro_prauc = average_precision_score(Y, all_Y_pred, average = 'weighted')
-        if USE_wandb:
-            wandb.log({'micro test aucroc' + self.version: micro_aucroc, 
-                        'macro test aucroc' + self.version: macro_aucroc,
-                        'micro test prauc' + self.version: micro_prauc,
-                        'macro test prauc' + self.version: macro_prauc})
+        # using the top 1 score of each drug. 
+        aucroc1_of_each_drug = []
+        prauc1_of_each_drug = []
+        for i in range(len(test_drug_idx)):
+            drug_spec_Y_pred = np.take(all_Y_pred, test_drug_idx[i],axis=0)
+            drug_spec_Y = np.take(Y, test_drug_idx[i],axis=0)
+            top_drug_spec_aucroc = max([roc_auc_score(drug_spec_Y[i].reshape(-1), drug_spec_Y_pred[i].reshape(-1)) for i in range(len(drug_spec_Y))])
+            top_drug_spec_prauc = max([average_precision_score(drug_spec_Y[i].reshape(-1), drug_spec_Y_pred[i].reshape(-1)) for i in range(len(drug_spec_Y))])
+            aucroc1_of_each_drug.append(top_drug_spec_aucroc)
+            prauc1_of_each_drug.append(top_drug_spec_prauc)
+        avg_of_top_aucroc  = np.mean(aucroc1_of_each_drug)
+        avg_of_top_prauc = np.mean(prauc1_of_each_drug)
         if self.logger is None:
-            print("Test {0:.4f}, {1:.4f}, {2:.4f}, {3:.4f}, {4!r}".format(micro_aucroc, macro_aucroc, micro_prauc, macro_prauc, self.epoch))
+            print("Test {0:.4f}, {1:.4f}, {2:.4f}".format(avg_of_top_aucroc, avg_of_top_prauc, self.epoch))
         else:
-            self.logger.debug("Test {0:.4f}, {1:.4f}, {2:.4f}, {3:.4f}, {4!r}".format(micro_aucroc, macro_aucroc, micro_prauc, macro_prauc, self.epoch))
-        return micro_aucroc, macro_aucroc, micro_prauc, macro_prauc
-
+            self.logger.debug("Test {0:.4f}, {1:.4f}, {2:.4f}".format(avg_of_top_aucroc, avg_of_top_prauc, self.epoch))
+        return avg_of_top_aucroc, avg_of_top_prauc
+ 
 
 
              
