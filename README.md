@@ -9,6 +9,11 @@ Thus, TransPro could be a useful tool for proteomics data imputation and systems
 pharmacology-oriented compound screening.
 
 <a rel="license" href="http://creativecommons.org/licenses/by/4.0/"><img alt="Creative Commons License" style="border-width:0" src="https://i.creativecommons.org/l/by/4.0/88x31.png" /></a><br />This work is licensed under a <a rel="license" href="http://creativecommons.org/licenses/by/4.0/">Creative Commons Attribution 4.0 International License</a>.
+
+# Cite the Paper
+
+Wu, You, Qiao Liu, and Lei Xie. "Hierarchical multi-omics data integration and modeling predict cell-specific chemical proteomics and drug responses." Cell Reports Methods 3.4 (2023).
+
 # Architecture
 
 ![alt text](images/Figure1.jpg "system overview")
